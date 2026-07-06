@@ -1,0 +1,47 @@
+# AgentOps Guardian Rules
+
+Use AgentOps Guardian as an on-demand safety layer. Do not run broad scans or background monitoring unless the user explicitly asks.
+
+## 1. Backup Before Risky Edits
+
+Before editing important files, prefer `guardian_run_workflow`. It performs the full cheap agent loop: plan, inspect, score, review, checkpoint, persist state, and return the next action.
+
+Use:
+
+- `workspaceRoot`: the current project root.
+- `proposedAction`: the edit or command you plan to perform.
+- `files`: the exact files you expect to modify.
+- `allowWrites`: `true` only when the user has approved file changes.
+- `allowShell`: `true` only when the user has approved shell execution.
+- `mode`: start with `cheap`.
+
+For lower-level integrations, call `prepare_safe_edit` with:
+
+- `proposedAction`: the edit or command you plan to perform.
+- `files`: the exact files you expect to modify.
+- `allowWrites`: `true` only when the user has approved file changes.
+- `allowShell`: `true` only when the user has approved shell execution.
+
+If you only need a direct backup, call `safe_checkpoint`. If the edit goes wrong, call `restore_latest` for the affected file.
+
+If the edit belongs to a saved Guardian workflow, prefer `guardian_restore_workflow` with the returned `workflowId`; it restores every checkpointed file from that workflow.
+
+## 2. Inspect Only When Asked
+
+Use `inspect_agent_environment_components` when the user asks about local agents, MCP servers, plugins, skills, providers, hooks, or installed app integrations.
+
+Defaults should stay cheap:
+
+- Leave `includeInstructions` as `false` unless remediation steps are needed.
+- Keep `useCache` enabled for repeated nearby checks.
+- Set `cacheTtlMs` to `0` only when the user asks for a fresh scan.
+
+## 3. Review Risky Actions
+
+Call `review_agent_action_plan` before destructive shell commands, publishing, broad filesystem access, secret handling, or edits that touch many files.
+
+Use `score_agent_surface` or `triage_guardian_findings` for a compact decision view after inspection.
+
+## 4. Economy Rule
+
+Prefer deterministic tools and compact outputs. Do not create logs, memories, summaries, or scans unless they directly support the user’s current request.
